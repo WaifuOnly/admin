@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "adminrank",
+  "version": "${version}",
+  "name": "Admin Rank",
+  "description": "Shows an animated ADMIN rank beside operators in the tab list and above their heads. Server-side: vanilla clients see it.",
+  "authors": ["S.Surviabily"],
+  "license": "MIT",
+  "icon": "assets/adminrank/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.example.adminrank.AdminRankMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
