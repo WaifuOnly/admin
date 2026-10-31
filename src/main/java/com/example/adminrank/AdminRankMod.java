@@ -20,6 +20,14 @@ public class AdminRankMod implements ModInitializer {
 
     public static final Logger LOGGER = LoggerFactory.getLogger("adminrank");
     private static final String TEAM = "adminrank";
+    /** Second rank: anyone with the vanilla tag "hrmod" (/tag Name add hrmod). */
+    private static final String TEAM_HR = "hrmod";
+    private static final String HR_TAG = "hrmod";
+    /** Indigo shades the HR MOD letters flow through. */
+    private static final String[] INDIGO = {
+        "#3730A3", "#4338CA", "#4F46E5", "#6366F1", "#818CF8", "#A5B4FC", "#818CF8", "#6366F1", "#4F46E5", "#4338CA"
+    };
+    private static final String HR_LETTERS = "HR MOD";
     private static final String LETTERS = "ADMIN";
     /** Frames of the shimmer: it runs across the letters, then pauses. */
     private static final int FRAMES = LETTERS.length() + 6;
@@ -41,11 +49,14 @@ public class AdminRankMod implements ModInitializer {
         if (!teamCreated) {
             run(server, "team add " + TEAM);          // harmless if it already exists
             run(server, "team modify " + TEAM + " color white");
+            run(server, "team add " + TEAM_HR);
+            run(server, "team modify " + TEAM_HR + " color white");
             teamCreated = true;
         }
         if (ticks % ANIMATION_EVERY_TICKS == 0) {
             frame = (frame + 1) % FRAMES;
             run(server, "team modify " + TEAM + " prefix " + prefix(frame));
+            run(server, "team modify " + TEAM_HR + " prefix " + hrPrefix(frame));
         }
         if (ticks % SYNC_EVERY_TICKS == 0) sync(server);
     }
@@ -63,6 +74,22 @@ public class AdminRankMod implements ModInitializer {
         return sb.toString();
     }
 
+    /** "\u2726 [HR MOD] " with an indigo wave flowing through the letters. */
+    private static String hrPrefix(int frame) {
+        StringBuilder sb = new StringBuilder("[{text:\"\u2726 \",color:\"#A5B4FC\"},{text:\"[\",color:\"#312E81\"}");
+        for (int i = 0; i < HR_LETTERS.length(); i++) {
+            char c = HR_LETTERS.charAt(i);
+            if (c == ' ') {
+                sb.append(",{text:\" \"}");
+                continue;
+            }
+            String color = INDIGO[Math.floorMod(i - frame, INDIGO.length)];
+            sb.append(",{text:\"").append(c).append("\",color:\"").append(color).append("\",bold:true}");
+        }
+        sb.append(",{text:\"] \",color:\"#312E81\"}]");
+        return sb.toString();
+    }
+
     /** Puts operators into the team and takes de-opped players out again. */
     private void sync(MinecraftServer server) {
         for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
@@ -70,12 +97,16 @@ public class AdminRankMod implements ModInitializer {
             PlayerTeam current = sp.getTeam() instanceof PlayerTeam pt ? pt : null;
             boolean inOurs = current != null && TEAM.equals(current.getName());
             boolean op = isOp(sp);
-            if (op && current == null) {
-                run(server, "team join " + TEAM + " " + name);
+            boolean inHr = current != null && TEAM_HR.equals(current.getName());
+            if (op && (current == null || inHr)) {
+                run(server, "team join " + TEAM + " " + name);   // ADMIN wins over HR MOD
             } else if (!op && inOurs) {
                 run(server, "team leave " + name);
             }
         }
+        // HR MOD: players carrying the "hrmod" tag who are not in any team yet.
+        run(server, "team join " + TEAM_HR + " @a[tag=" + HR_TAG + ",team=]");
+        run(server, "team leave @a[team=" + TEAM_HR + ",tag=!" + HR_TAG + "]");
     }
 
     private static void run(MinecraftServer server, String command) {
